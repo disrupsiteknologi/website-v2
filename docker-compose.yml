@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  disrupsiteknologi-mongodb:
+    container_name: disrupsiteknologi-mongodb
+    image: disrupsiteknologi-mongodb:0.0.1
+    build: ./mongodb
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongodb/mongod.log:/etc/mongod.log
+      - ./mongodb/data:/data/db
+      - ./mongodb/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    env_file:
+      - ./mongodb/.env
+    networks:
+      - disrupsiteknologi
+    command:
+      - '--auth'
+  disrupsiteknologi-nodejs:
+    depends_on:
+      - disrupsiteknologi-mongodb
+    container_name: disrupsiteknologi-nodejs
+    image: disrupsiteknologi-nodejs:0.0.1
+    build: ./nodejs
+    ports:
+      - 3000:3000
+    volumes:
+      - ./app:/home/node/app
+    env_file:
+      - ./app/.env
+    networks:
+      - disrupsiteknologi
+    entrypoint: ['bash', './entrypoint.sh']
+  disrupsiteknologi-nginx:
+    depends_on:
+      - disrupsiteknologi-nodejs
+    container_name: disrupsiteknologi-nginx
+    image: disrupsiteknologi-nginx:0.0.1
+    build: ./nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/logs/access.log:/var/log/nginx/access.log
+      - ./nginx/logs/error.log:/var/log/nginx/error.log
+      - ./www:/usr/share/nginx/html
+    env_file:
+      - ./nginx/.env
+    networks:
+      - disrupsiteknologi
+networks:
+  disrupsiteknologi:
+    name: disrupsiteknologi
+    driver: bridge
